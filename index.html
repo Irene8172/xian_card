@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>长安风物卡牌 - 西安景区探索</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome 6 CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=Noto+Serif+SC:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- 高德地图API -->
+    <script type="text/javascript" src="https://webapi.amap.com/maps?v=2.0&key=da97574132fa2706e56648cfec6796f4"></script>
+    <!-- Alpine.js CDN -->
+    <script defer src="https://unpkg.com/alpinejs@3.12.0/dist/cdn.min.js"></script>
+    
+    <!-- Tailwind Configuration -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'ancient-gold': '#C9A962',
+                        'ancient-red': '#8B1A1A',
+                        'ancient-blue': '#1A1A2E',
+                        'ancient-dark': '#0F0F1A',
+                        'ancient-green': '#0D3B2E',
+                    },
+                    fontFamily: {
+                        'serif': ['Noto Serif SC', 'serif'],
+                        'sans': ['Noto Sans SC', 'sans-serif'],
+                    },
+                    animation: {
+                        'flip': 'flip 0.6s ease-in-out',
+                        'fly-in': 'flyIn 0.5s ease-out',
+                        'shake': 'shake 0.5s ease-in-out',
+                        'glow': 'glow 2s ease-in-out infinite',
+                        'float': 'float 3s ease-in-out infinite',
+                        'card-pop': 'cardPop 1.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                        'card-reveal': 'cardReveal 0.8s ease-out',
+                        'sparkle': 'sparkle 0.5s ease-out',
+                        'light-ray': 'lightRay 1.5s ease-out',
+                    },
+                    keyframes: {
+                        flip: { '0%': { transform: 'rotateY(0deg)' }, '100%': { transform: 'rotateY(360deg)' } },
+                        flyIn: { '0%': { transform: 'translateY(-100px) rotate(10deg)', opacity: '0' }, '100%': { transform: 'translateY(0) rotate(0deg)', opacity: '1' } },
+                        shake: { '0%, 100%': { transform: 'translateX(0)' }, '25%': { transform: 'translateX(-5px)' }, '75%': { transform: 'translateX(5px)' } },
+                        glow: { '0%, 100%': { boxShadow: '0 0 5px rgba(201, 169, 98, 0.5)' }, '50%': { boxShadow: '0 0 20px rgba(201, 169, 98, 0.8)' } },
+                        float: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-10px)' } },
+                        cardPop: { '0%': { transform: 'translateY(100vh) scale(0.5)', opacity: '0' }, '50%': { transform: 'translateY(-50px) scale(1.1)', opacity: '1' }, '100%': { transform: 'translateY(0) scale(1)', opacity: '1' } },
+                        cardReveal: { '0%': { transform: 'rotateY(90deg)', opacity: '0' }, '50%': { transform: 'rotateY(45deg)', opacity: '0.5' }, '100%': { transform: 'rotateY(0deg)', opacity: '1' } },
+                        sparkle: { '0%': { transform: 'scale(0)', opacity: '1' }, '100%': { transform: 'scale(2)', opacity: '0' } },
+                        lightRay: { '0%': { transform: 'scale(0) rotate(-45deg)', opacity: '1' }, '100%': { transform: 'scale(3) rotate(-45deg)', opacity: '0' } },
+                    },
+                },
+            }
+        }
+    </script>
+    
+    <style>
+        .card-container { perspective: 1000px; }
+        .card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.6s; transform-style: preserve-3d; }
+        .card-inner.flipped { transform: rotateY(180deg); }
+        .card-front, .card-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+        .card-back { transform: rotateY(180deg); }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        .glass-effect { background: rgba(15, 15, 26, 0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+        .card-gold-border { border: 2px solid #C9A962; box-shadow: 0 0 15px rgba(201, 169, 98, 0.3), inset 0 0 15px rgba(201, 169, 98, 0.1); }
+        .card-silver-border { border: 2px solid #A8A8A8; box-shadow: 0 0 15px rgba(168, 168, 168, 0.3); }
+        .card-bronze-border { border: 2px solid #CD7F32; box-shadow: 0 0 15px rgba(205, 127, 50, 0.3); }
+        .star-rating { color: #C9A962; }
+        .audio-progress { transition: width 0.1s linear; }
+    </style>
+</head>
+<body class="bg-ancient-dark min-h-screen text-white font-sans overflow-x-hidden">
+    <!-- Background Pattern -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none">
+        <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(201,169,98,0.05)_0%,_transparent_70%)]"></div>
+    </div>
+    
+        <div x-data="app()" class="relative z-10 min-h-screen pb-24">
+        <!-- Draw Animation Container -->
+        <div x-show="isDrawing" class="fixed inset-0 z-50 flex items-center justify-center">
+            <!-- Black Background Overlay -->
+            <div class="absolute inset-0 bg-black/80"></div>
+            
+            <!-- Light Rays -->
+            <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div class="absolute w-32 h-32 bg-ancient-gold/30 rounded-full animate-light-ray"></div>
+                <div class="absolute w-32 h-32 bg-ancient-gold/20 rounded-full animate-light-ray" style="animation-delay: 0.2s;"></div>
+                <div class="absolute w-32 h-32 bg-ancient-gold/10 rounded-full animate-light-ray" style="animation-delay: 0.4s;"></div>
+            </div>
+            
+            <!-- Sparkles -->
+            <template x-for="i in 12" :key="i">
+                <div 
+                    class="absolute w-2 h-2 bg-ancient-gold rounded-full animate-sparkle pointer-events-none"
+                    :style="{ 
+                        left: `${50 + Math.cos(i * 30 * Math.PI / 180) * 20}%`, 
+                        top: `${50 + Math.sin(i * 30 * Math.PI / 180) * 20}%`,
+                        animationDelay: `${i * 0.05}s`
+                    }"
+                ></div>
+            </template>
+            
+            <!-- Flying Cards -->
+            <template x-for="i in 5" :key="'card-'+i">
+                <div 
+                    class="absolute w-16 h-20 rounded-lg bg-gradient-to-br from-ancient-blue to-ancient-dark border border-ancient-gold/30 animate-card-pop pointer-events-none"
+                    :style="{ 
+                        left: `${30 + Math.random() * 40}%`, 
+                        top: `${20 + Math.random() * 60}%`,
+                        animationDelay: `${i * 0.1}s`,
+                        transform: `rotate(${Math.random() * 30 - 15}deg)`
+                    }"
+                ></div>
+            </template>
+            
+            <!-- Revealed Card -->
+            <div 
+                class="relative w-48 h-64 animate-card-pop pointer-events-none"
+                :style="{ animationDelay: '0.5s' }"
+            >
+                <div class="absolute inset-0 rounded-xl bg-gradient-to-br from-gray-700 to-gray-900 border-2 border-ancient-gold/30 transform rotate-3"></div>
+                <div class="absolute inset-0 rounded-xl bg-gradient-to-br from-gray-700 to-gray-900 border-2 border-ancient-gold/30 transform -rotate-3"></div>
+                <div class="absolute inset-0 rounded-xl bg-gradient-to-br from-gray-700 to-gray-900 border-2 border-ancient-gold/30"></div>
+                <div class="absolute inset-0 rounded-xl card-gold-border overflow-hidden">
+                    <!-- Unlocked State -->
+                    <div 
+                        :class="[
+                            'absolute inset-0 flex flex-col items-center justify-center bg-gray-800 transition-all duration-300',
+                            showCardFront ? 'opacity-0 pointer-events-none' : 'opacity-100'
+                        ]"
+                    >
+                        <div class="w-16 h-16 rounded-full bg-gray-700 flex items-center justify-center mb-2">
+                            <i class="fa-solid fa-question text-3xl text-gray-500"></i>
+                        </div>
+                        <span class="text-sm text-gray-400">未解锁</span>
+                    </div>
+                    
+                    <!-- Card Front -->
+                    <div 
+                        :class="[
+                            'absolute inset-0 transition-all duration-300',
+                            showCardFront ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                        ]"
+                    >
+                        <img 
+                            :src="getSpotImage(selectedIndex)"
+                            :alt="spots[selectedIndex]?.name"
+                            class="w-full h-full object-cover"
+                        />
+                        <div class="absolute inset-0 bg-gradient-to-t from-ancient-dark/80 to-transparent"></div>
+                        <div class="absolute bottom-2 left-2 right-2">
+                            <span class="text-sm font-serif text-white truncate block" :title="spots[selectedIndex]?.name" x-text="spots[selectedIndex]?.name"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Header -->
+        <header class="sticky top-0 z-50 glass-effect border-b border-ancient-gold/20">
+            <div class="px-4 py-3 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-landmark text-ancient-gold text-xl"></i>
+                    <h1 class="font-serif text-lg font-semibold text-ancient-gold">长安风物卡牌</h1>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button 
+                        @click="resetProgress"
+                        class="text-xs text-gray-400 hover:text-ancient-red transition-colors flex items-center gap-1"
+                    >
+                        <i class="fa-solid fa-rotate-right"></i>
+                        <span>重置</span>
+                    </button>
+                    <span class="text-sm text-gray-400">收集进度</span>
+                    <span class="text-ancient-gold font-bold" x-text="collectedCards.length + '/17'"></span>
+                </div>
+            </div>
+        </header>
+
+        
+
+        <!-- Collection View -->
+        <div x-show="currentView === 'collection'" class="px-4 pt-4">
+            <div class="grid grid-cols-3 gap-3">
+                <template x-for="(spot, index) in spots" :key="index">
+                    <div 
+                        class="relative aspect-[3/4] rounded-xl cursor-pointer"
+                        :class="{ 'animate-float': isCollected(index), 'opacity-60': !isCollected(index) }"
+                        @click="openDetail(index)"
+                    >
+                        <!-- Collected Card -->
+                        <div x-show="isCollected(index)" :class="['rounded-xl overflow-hidden h-full', getRarityClass(index)]">
+                            <!-- Scenic Spot Image with gradient overlay for text -->
+                            <div class="relative w-full h-full">
+                                <img 
+                                    :src="getSpotImage(index)"
+                                    :alt="spot.name"
+                                    class="w-full h-full object-cover"
+                                    loading="lazy"
+                                />
+                                <!-- Gradient fade effect at bottom for text -->
+                                <div class="absolute inset-0 bg-gradient-to-t from-ancient-dark/90 via-ancient-dark/20 to-transparent"></div>
+                                <!-- Text overlay at bottom -->
+                                <div class="absolute bottom-0 left-0 right-0 p-2">
+                                    <span class="text-xs font-serif text-white text-center leading-tight truncate block w-full" :title="spot.name" x-text="spot.name"></span>
+                                    <div class="flex items-center justify-center gap-1 mt-1">
+                                        <i class="fa-solid fa-star star-rating text-xs"></i>
+                                        <span class="text-xs text-gray-300" x-text="spot.rating"></span>
+                                    </div>
+                                </div>
+                                <!-- Draw Count Badge -->
+                                <div 
+                                    x-if="isCollected(index) && getDrawCount(index) > 0"
+                                    class="absolute top-1 right-1 bg-ancient-red text-white text-xs px-2 py-0.5 rounded-full z-10"
+                                >
+                                    <span x-text="'x' + getDrawCount(index)"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Not Collected Card -->
+                        <div x-show="!isCollected(index)" class="rounded-xl bg-gradient-to-br from-gray-800 to-gray-900 flex flex-col items-center justify-center p-2 h-full">
+                            <div class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center mb-2">
+                                <i class="fa-solid fa-question text-gray-500"></i>
+                            </div>
+                            <span class="text-xs text-gray-500">未解锁</span>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- Detail Modal -->
+        <div 
+            x-show="showDetail"
+            class="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+            @click.self="closeDetail"
+        >
+            <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="closeDetail"></div>
+            <div 
+                class="relative w-full sm:w-[400px] max-h-[85vh] glass-effect rounded-t-3xl sm:rounded-3xl border-t border-ancient-gold/30 overflow-hidden"
+                @touchstart="startY = $event.touches[0].clientY"
+                @touchend="handleSwipeClose"
+            >
+                <!-- Modal Header -->
+                <div class="relative h-32 overflow-hidden">
+                    <img 
+                        :src="getSpotImage(selectedIndex)"
+                        :alt="spots[selectedIndex]?.name"
+                        class="w-full h-full object-cover"
+                    />
+                    <div class="absolute inset-0 bg-gradient-to-t from-ancient-dark/90 via-ancient-dark/40 to-transparent"></div>
+                    <div class="absolute bottom-4 left-4 right-4">
+                        <span :class="['inline-block px-2 py-0.5 rounded text-xs mb-2', getRarityBadgeClass(selectedIndex)]" x-text="getRarityText(selectedIndex)"></span>
+                        <h2 class="font-serif text-xl font-bold text-white" x-text="spots[selectedIndex]?.name"></h2>
+                    </div>
+                    <button @click="closeDetail" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-black/30 flex items-center justify-center hover:bg-black/50 transition-colors">
+                        <i class="fa-solid fa-xmark text-white"></i>
+                    </button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="p-4 overflow-y-auto max-h-[calc(85vh-8rem)] scrollbar-hide">
+                    <!-- Basic Info -->
+                    <div class="grid grid-cols-2 gap-2 mb-4">
+                        <div class="bg-gray-800/50 rounded-lg p-2">
+                            <div class="flex items-center gap-1 text-gray-400 text-xs">
+                                <i class="fa-solid fa-map-marker"></i>
+                                <span>地址</span>
+                            </div>
+                            <p class="text-sm mt-1 truncate" :title="spots[selectedIndex]?.address" x-text="spots[selectedIndex]?.address"></p>
+                        </div>
+                        <div class="bg-gray-800/50 rounded-lg p-2">
+                            <div class="flex items-center gap-1 text-gray-400 text-xs">
+                                <i class="fa-solid fa-award"></i>
+                                <span>等级</span>
+                            </div>
+                            <p class="text-sm mt-1" x-text="spots[selectedIndex]?.level || '-'"></p>
+                        </div>
+                        <div class="bg-gray-800/50 rounded-lg p-2">
+                            <div class="flex items-center gap-1 text-gray-400 text-xs">
+                                <i class="fa-solid fa-clock"></i>
+                                <span>开放时间</span>
+                            </div>
+                            <p class="text-sm mt-1" x-text="spots[selectedIndex]?.hours || '-'"></p>
+                        </div>
+                        <div class="bg-gray-800/50 rounded-lg p-2">
+                            <div class="flex items-center gap-1 text-gray-400 text-xs">
+                                <i class="fa-solid fa-star"></i>
+                                <span>评分</span>
+                            </div>
+                            <p class="text-sm mt-1 text-ancient-gold" x-text="spots[selectedIndex]?.rating"></p>
+                        </div>
+                    </div>
+
+                    <!-- Map Display -->
+                    <div x-if="spots[selectedIndex]?.lat && spots[selectedIndex]?.lng" class="mb-4">
+                        <h3 class="font-serif text-sm font-semibold text-ancient-gold mb-2 flex items-center gap-2">
+                            <i class="fa-solid fa-map"></i>
+                            地图位置
+                        </h3>
+                        <div id="detail-map" class="w-full h-32 rounded-lg bg-gray-800/50 overflow-hidden"></div>
+                    </div>
+
+                    <!-- Description -->
+                    <div class="mb-4">
+                        <h3 class="font-serif text-sm font-semibold text-ancient-gold mb-2">为什么必去？</h3>
+                        <p class="text-sm text-gray-300 leading-relaxed" x-text="spots[selectedIndex]?.description"></p>
+                    </div>
+
+                    <!-- Highlights -->
+                    <div x-if="spots[selectedIndex]?.highlights" class="mb-4">
+                        <h3 class="font-serif text-sm font-semibold text-ancient-gold mb-2">精彩看点</h3>
+                        <ul class="space-y-1">
+                            <template x-for="(highlight, idx) in spots[selectedIndex].highlights" :key="idx">
+                                <li class="text-sm text-gray-300 flex items-start gap-2">
+                                    <i class="fa-solid fa-circle text-xs text-ancient-gold mt-1 flex-shrink-0"></i>
+                                    <span x-text="highlight"></span>
+                                </li>
+                            </template>
+                        </ul>
+                    </div>
+
+                    <!-- Audio Player -->
+                    <div class="bg-gray-800/50 rounded-lg p-4">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="font-serif text-sm font-semibold text-ancient-gold flex items-center gap-2">
+                                <i class="fa-solid fa-headphones"></i>
+                                语音导览
+                            </h3>
+                            <span class="text-xs text-gray-500" x-text="formatTime(currentTime) + ' / ' + formatTime(duration)"></span>
+                        </div>
+                        <div class="relative h-2 bg-gray-700 rounded-full mb-3 cursor-pointer" @click="seekAudio">
+                            <div 
+                                class="absolute h-full bg-ancient-gold rounded-full audio-progress"
+                                :style="{ width: (duration ? (currentTime / duration) * 100 : 0) + '%' }"
+                            ></div>
+                            <div 
+                                class="absolute top-1/2 w-4 h-4 bg-white rounded-full shadow-lg"
+                                :style="{ left: (duration ? (currentTime / duration) * 100 : 0) + '%', transform: 'translate(-50%, -50%)' }"
+                            ></div>
+                        </div>
+                        <div class="flex items-center justify-center gap-6">
+                            <button 
+                                @click="toggleAudio"
+                                :class="[
+                                    'w-12 h-12 rounded-full flex items-center justify-center transition-all',
+                                    isPlaying 
+                                        ? 'bg-ancient-gold text-ancient-dark hover:scale-110' 
+                                        : 'bg-ancient-gold/20 text-ancient-gold hover:bg-ancient-gold/30'
+                                ]"
+                            >
+                                <i :class="['text-xl', isPlaying ? 'fa-solid fa-pause' : 'fa-solid fa-play']"></i>
+                            </button>
+                        </div>
+                        <p class="text-xs text-gray-500 text-center mt-2">
+                            <i class="fa-solid fa-info-circle"></i>
+                            <span x-text="isAudioLoading ? '音频加载中...' : '音频文件占位（实际项目中替换为真实音频URL）'"></span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Navigation -->
+        <div class="fixed bottom-0 left-0 right-0 glass-effect border-t border-ancient-gold/20 px-4 py-3 flex items-center justify-around">
+            <button 
+                @click="currentView = 'collection'"
+                :class="['flex flex-col items-center gap-1 transition-all', currentView === 'collection' ? 'text-ancient-gold' : 'text-gray-400']"
+            >
+                <i class="fa-solid fa-book text-lg"></i>
+                <span class="text-xs">收藏册</span>
+            </button>
+            <button 
+                @click="drawCard"
+                :class="[
+                    'w-14 h-14 rounded-full bg-gradient-to-r from-ancient-gold to-amber-600 flex items-center justify-center shadow-lg shadow-ancient-gold/30 transition-all hover:scale-110 active:scale-95',
+                    isDrawing ? 'animate-shake' : ''
+                ]"
+            >
+                <i class="fa-solid fa-shuffle text-ancient-dark text-xl"></i>
+            </button>
+            <button @click="showSpotList = true" class="flex flex-col items-center gap-1 text-gray-400 hover:text-ancient-gold transition-all">
+                <i class="fa-solid fa-list text-lg"></i>
+                <span class="text-xs">名录</span>
+            </button>
+        </div>
+
+        <!-- Spot List Drawer -->
+        <div x-show="showSpotList" class="fixed inset-0 z-50" @click.self="showSpotList = false">
+            <div class="absolute inset-0 bg-black/60" @click="showSpotList = false"></div>
+            <div class="absolute bottom-0 left-0 right-0 glass-effect rounded-t-3xl max-h-[70vh] overflow-hidden">
+                <div class="p-4 border-b border-ancient-gold/20 flex items-center justify-between">
+                    <h3 class="font-serif text-lg font-semibold text-ancient-gold">全部景点名录</h3>
+                    <button @click="showSpotList = false" class="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center">
+                        <i class="fa-solid fa-xmark text-gray-400"></i>
+                    </button>
+                </div>
+                <div class="p-4 overflow-y-auto max-h-[calc(70vh-60px)] scrollbar-hide">
+                    <div class="space-y-2">
+                        <template x-for="(spot, index) in spots" :key="index">
+                            <button 
+                                @click="openDetail(index); showSpotList = false"
+                                :class="[
+                                    'w-full p-3 rounded-lg flex items-center gap-3 transition-all',
+                                    collectedCards.includes(index) 
+                                        ? 'bg-gray-800/50 hover:bg-gray-700/50' 
+                                        : 'bg-gray-900/50 opacity-60'
+                                ]"
+                            >
+                                <div :class="['w-10 h-10 rounded-lg flex items-center justify-center', collectedCards.includes(index) ? getRarityBgClass(index) : 'bg-gray-700']">
+                                    <i :class="['text-lg', collectedCards.includes(index) ? spot.icon : 'fa-solid fa-lock text-gray-500']"></i>
+                                </div>
+                                <div class="flex-1 text-left">
+                                    <p class="text-sm font-medium" x-text="spot.name"></p>
+                                    <p class="text-xs text-gray-500" x-text="spot.level"></p>
+                                </div>
+                                <div x-if="collectedCards.includes(index)" class="flex items-center gap-1">
+                                    <i class="fa-solid fa-star star-rating text-xs"></i>
+                                    <span class="text-xs text-gray-400" x-text="spot.rating"></span>
+                                </div>
+                            </button>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('app', () => ({
+                // State
+                currentView: 'collection',
+                showDetail: false,
+                showSpotList: false,
+                selectedIndex: 0,
+                isDrawing: false,
+                showCardFront: false,
+                collectedCards: [],
+                drawCount: [],
+                startY: 0,
+                map: null,
+                
+                // Audio state
+                audio: null,
+                isPlaying: false,
+                isAudioLoading: false,
+                currentTime: 0,
+                duration: 0,
+                
+                // 17个景点数据
+                spots: [
+                    {
+                        name: '秦始皇兵马俑博物馆',
+                        address: '西安市临潼区秦陵北路',
+                        level: '首批国家5A级景区、国家一级博物馆',
+                        hours: '旺季 3/16—11/15：8:30—17:00；淡季 11/16—次年 3/15：8:30—16:30',
+                        rating: '4.7-4.8',
+                        lat: 34.386214,
+                        lng: 109.281960,
+                        description: '如果说西安有一张「递向世界」的名片，兵马俑一定排在最前面。1974年当地农民打井时偶然发现，一座沉睡两千多年的地下军阵从此震惊世界——被誉为「世界第八大奇迹」。',
+                        highlights: ['一号坑：规模最大，约6000件陶俑陶马', '二号坑：兵种最全，堪称秦俑精华', '三号坑：军队指挥部，约72件陶俑', '铜车马：工艺精湛，被誉为「青铜之冠」'],
+                        audio: 'audio-guides/01-bingmayong.m4a',
+                        icon: 'fa-solid fa-landmark',
+                        rarity: 'gold'
+                    },
+                    {
+                        name: '大雁塔',
+                        address: '雁塔区慈恩路1号大慈恩寺内',
+                        level: '5A级景区、世界文化遗产',
+                        hours: '约09:00—18:00',
+                        rating: '4.9',
+                        lat: 34.218229,
+                        lng: 108.964176,
+                        description: '大雁塔是现存最早、规模最大的唐代四方楼阁式砖塔，也是丝绸之路鼎盛时期东西方文化交流的见证。没有它，西安的skyline就少了那根直指苍穹的「唐风坐标」。',
+                        highlights: ['玄奘负笈图、译经图', '珍贵贝叶经', '莲花藻井，凭栏远眺古城'],
+                        audio: 'audio-guides/02-dayanta.m4a',
+                        icon: 'fa-solid fa-building',
+                        rarity: 'gold'
+                    },
+                    {
+                        name: '西安城墙',
+                        address: '碑林区南大街2号',
+                        level: '5A级景区、全国重点文物保护单位',
+                        hours: '约08:00—22:00',
+                        rating: '4.8',
+                        lat: 34.275900,
+                        lng: 108.948183,
+                        description: '这是中国现存规模最大、保存最完整的古代城垣之一，也是全国重点文物保护单位名单中唯一的城垣类建筑。登上城墙，脚下是十三朝古都的脉搏。',
+                        highlights: ['周长13.74千米', '四座主城门：长乐门、永宁门、安定门、安远门', '骑行环城约1.5-2小时'],
+                        audio: 'audio-guides/03-chengqiang.m4a',
+                        icon: 'fa-solid fa-shield-halved',
+                        rarity: 'gold'
+                    },
+                    {
+                        name: '大唐芙蓉园',
+                        address: '雁塔区芙蓉西路99号',
+                        level: '国家5A级旅游景区',
+                        hours: '约09:00—22:00',
+                        rating: '4.6',
+                        lat: 34.212717,
+                        lng: 108.974360,
+                        description: '想穿越回盛唐？这里是中国第一个全方位展示盛唐风貌的大型皇家园林式文化主题公园。1000亩占地、300亩水域，一步一景，皆是「长安梦」。',
+                        highlights: ['紫云楼：园区制高点', '彩霞长廊：遥望大雁塔绝佳', '《大唐追梦》水舞光影秀', '新春灯会'],
+                        audio: 'audio-guides/04-furongyuan.m4a',
+                        icon: 'fa-solid fa-flower-tulip',
+                        rarity: 'silver'
+                    },
+                    {
+                        name: '华清宫',
+                        address: '临潼区华清路38号',
+                        level: '5A级、全国重点文物保护单位',
+                        hours: '约07:30—19:00',
+                        rating: '4.7',
+                        lat: 34.356728,
+                        lng: 109.215759,
+                        description: '「春寒赐浴华清池，温泉水滑洗凝脂」——白居易一句诗，让华清宫成为爱情与盛衰交织的代名词。背山面渭，温泉、宫殿、历史悲剧，全在这一池碧水间。',
+                        highlights: ['唐玄宗与杨贵妃的爱情故事', '西安事变遗址：五间厅、兵谏亭', '《长恨歌》实景演出'],
+                        audio: 'audio-guides/05-huaqinggong.m4a',
+                        icon: 'fa-solid fa-spa',
+                        rarity: 'gold'
+                    },
+                    {
+                        name: '大明宫国家遗址公园',
+                        address: '新城区自强东路585号',
+                        level: '5A级、世界文化遗产',
+                        hours: '旺季约8:30—19:00；淡季约8:30—18:00',
+                        rating: '4.7',
+                        lat: 34.292586,
+                        lng: 108.963530,
+                        description: '如果说兵马俑代表秦帝国的铁血，大明宫则代表唐帝国的辉煌。这里是唐长安城「三大内」中最壮丽的一座，面积约为北京故宫的4.5倍。',
+                        highlights: ['丹凤门、含元殿遗址', '太液池', '微缩景观「千宫之宫」', 'IMAX电影《大明宫传奇》'],
+                        audio: 'audio-guides/06-daminggong.m4a',
+                        icon: 'fa-solid fa-castle',
+                        rarity: 'gold'
+                    },
+                    {
+                        name: '西安钟楼',
+                        address: '地铁2号线钟楼站对面',
+                        level: '全国重点文物保护单位',
+                        hours: '约08:30—21:30',
+                        rating: '4.9',
+                        lat: 34.259430,
+                        lng: 108.947030,
+                        description: '钟楼是西安的心脏——东西南北四条大街在此交汇，明清以来便是城市的几何中心。夜里灯光亮起，飞檐斗拱与车水马龙同框，是西安最经典的明信片画面。',
+                        highlights: ['景云钟：唐代国宝', '《钟楼东迁歌》碑', '门扇木雕：64幅浮雕典故'],
+                        audio: 'audio-guides/07-zhonglou.m4a',
+                        icon: 'fa-solid fa-clock',
+                        rarity: 'silver'
+                    },
+                    {
+                        name: '回民街',
+                        address: '莲湖区北院门125号一带',
+                        level: '美食文化街区',
+                        hours: '全天',
+                        rating: '4.7',
+                        lat: 34.264587,
+                        lng: 108.936378,
+                        description: '不到回民街，怎算吃过西安？这里是西北最大的清真风味聚集地，6万余穆斯林群众聚居，10座清真寺点缀其间，烟火气与宗教文化和谐共生。',
+                        highlights: ['牛羊肉泡馍：陕西小吃之冠', '腊牛羊肉：下酒绝配', '灌汤包子：皮薄馅嫩', '镜糕/甑糕：糯米甜品'],
+                        audio: 'audio-guides/08-huiminjie.m4a',
+                        icon: 'fa-solid fa-utensils',
+                        rarity: 'bronze'
+                    },
+                    {
+                        name: '大唐不夜城',
+                        address: '雁塔区慈恩路46号',
+                        level: '大型仿唐步行街',
+                        hours: '全天',
+                        rating: '4.8',
+                        lat: 34.213866,
+                        lng: 108.964046,
+                        description: '中国唯一以盛唐文化为背景的大型仿唐建筑群步行街，南北长2100米、东西宽500米——从大雁塔南广场一直延伸到唐城墙遗址。',
+                        highlights: ['贞观广场、开元广场', '主题雕塑群', '不倒翁小姐姐表演', '「长安十二时辰」主题街区'],
+                        audio: 'audio-guides/09-buyeicheng.m4a',
+                        icon: 'fa-solid fa-city',
+                        rarity: 'silver'
+                    },
+                    {
+                        name: '陕西历史博物馆',
+                        address: '雁塔区小寨东路91号',
+                        level: '国家一级博物馆、AAAA级景区',
+                        hours: '夏季约8:30—18:00；冬季约9:30—17:00',
+                        rating: '4.9',
+                        lat: 34.224199,
+                        lng: 108.955044,
+                        description: '「古都明珠，华夏宝库」——中国第一座大型现代化国家级博物馆，馆藏170余万件，一级文物762件，国宝级18件。一百万年文明在此浓缩。',
+                        highlights: ['镶金兽首玛瑙杯', '鸳鸯莲瓣纹金碗', '唐墓壁画珍品馆', '大唐遗宝（何家村窖藏）'],
+                        audio: 'audio-guides/10-shanlibo.m4a',
+                        icon: 'fa-solid fa-museum',
+                        rarity: 'gold'
+                    },
+                    {
+                        name: '西安碑林博物馆',
+                        address: '碑林区三学街15号',
+                        level: '国家一级博物馆',
+                        hours: '约08:00—18:30',
+                        rating: '4.7',
+                        lat: 34.254497,
+                        lng: 108.952860,
+                        description: '这里是中国收藏历代碑石时间最早、数量最多的博物馆之一，被誉为「石刻书法艺术的宝库」。走进碑林就像翻开一部立体的中国书法史。',
+                        highlights: ['唐《开成石经》', '颜真卿《颜氏家庙碑》', '柳公权《玄秘塔碑》', '馆藏14338件'],
+                        audio: 'audio-guides/11-beilin.m4a',
+                        icon: 'fa-solid fa-file-signature',
+                        rarity: 'silver'
+                    },
+                    {
+                        name: '西安博物院',
+                        address: '碑林区友谊西路72号',
+                        level: '国家一级博物馆、AAAA级景区',
+                        hours: '旺季约08:30—18:00',
+                        rating: '-',
+                        lat: 34.238600,
+                        lng: 108.944000,
+                        description: '博物馆+唐荐福寺遗址+小雁塔，三位一体的文化休闲空间。相比陕历博的人潮，这里相对清静，却同样藏龙卧虎。',
+                        highlights: ['小雁塔：密檐式砖塔', '三彩腾空马：盛唐气象', '鎏金铜铺首：大明宫遗址出土', '「古都西安」基本陈列'],
+                        audio: 'audio-guides/12-xianbowuyuan.m4a',
+                        icon: 'fa-solid fa-landmark',
+                        rarity: 'silver'
+                    },
+                    {
+                        name: '汉城湖旅游风景区',
+                        address: '未央区北二环与朱宏路交汇处西北角',
+                        level: '国家4A级景区、国家水利风景区',
+                        hours: '春夏季约6:00—22:00',
+                        rating: '-',
+                        lat: 34.284700,
+                        lng: 108.904200,
+                        description: '想在西郊找一片开阔水面、又带着汉风汉韵？汉城湖是个好选择。原为团结水库，2010年更名汉城湖，850亩清澈水面依偎汉长安城遗址。',
+                        highlights: ['汉武大帝铜像', '天汉雄风浮雕', '音乐喷泉、水车水磨', '封禅天下广场'],
+                        audio: 'audio-guides/13-hanchenghu.m4a',
+                        icon: 'fa-solid fa-water',
+                        rarity: 'bronze'
+                    },
+                    {
+                        name: '未央宫国家考古遗址公园',
+                        address: '未央区大兴西路一带',
+                        level: '世界文化遗产',
+                        hours: '全天',
+                        rating: '-',
+                        lat: 34.276500,
+                        lng: 108.884000,
+                        description: '未央宫是西汉帝国的正宫，刘邦重臣萧何监造，自建成起200余年多为皇帝理政之所——诗词中的「未央宫」几乎就是汉宫的代名词。',
+                        highlights: ['张骞出使西域的出发地', '面积约5平方千米', '宫墙、司马门、前殿遗址', '石渠阁、天禄阁'],
+                        audio: 'audio-guides/14-weiyanggong.m4a',
+                        icon: 'fa-solid fa-columns',
+                        rarity: 'silver'
+                    },
+                    {
+                        name: '广仁寺',
+                        address: '城墙西北角西北一路152号',
+                        level: '全国重点寺院、4A级景区',
+                        hours: '约7:30—18:00',
+                        rating: '-',
+                        lat: 34.275000,
+                        lng: 108.932000,
+                        description: '西安城墙西北角，藏着一座全省唯一的藏传佛教格鲁派寺院——广仁寺。康熙四十四年西巡时敕建，取「广布仁德」之意。',
+                        highlights: ['中国唯一的绿度母主道场', '四大殿：观音殿、绿度母殿、千佛殿、藏经阁', '腊八节施粥、燃灯节'],
+                        audio: 'audio-guides/15-guangrensi.m4a',
+                        icon: 'fa-solid fa-pray',
+                        rarity: 'bronze'
+                    },
+                    {
+                        name: '青龙寺',
+                        address: '雁塔区西影路铁炉庙村北1号',
+                        level: '佛教密宗祖庭',
+                        hours: '约08:30—18:00',
+                        rating: '-',
+                        lat: 34.220000,
+                        lng: 108.986000,
+                        description: '樱花季来西安？青龙寺是首选。这里是日本佛教真言宗祖庭——空海法师曾在此拜惠果为师，学成东归创立东密，被日本人视为圣寺。',
+                        highlights: ['空海纪念碑', '惠果空海纪念堂', '千余株樱花', '三月至四月盛花期'],
+                        audio: 'audio-guides/16-qinglongsi.m4a',
+                        icon: 'fa-solid fa-tree-pine',
+                        rarity: 'bronze'
+                    },
+                    {
+                        name: '高家大院',
+                        address: '莲湖区北院门144号',
+                        level: '陕西省文物保护单位',
+                        hours: '约10:00—18:00',
+                        rating: '-',
+                        lat: 34.263800,
+                        lng: 108.938000,
+                        description: '回民街的喧嚣里，藏着一座保存最完整的明清民居四合院。始建于明崇祯十四年，三院四进、86间房屋，榜眼及第的高岳崧家族七代为官。',
+                        highlights: ['榜眼及第匾额', '砖雕照壁、木雕斗拱', '皮影、华阴老腔表演', '《大红灯笼高高挂》取景地'],
+                        audio: 'audio-guides/17-gaojiadayuan.m4a',
+                        icon: 'fa-solid fa-home',
+                        rarity: 'bronze'
+                    }
+                ],
+
+                init() {
+                    try {
+                        const saved = localStorage.getItem('xian-cards');
+                        if (saved) {
+                            const parsed = JSON.parse(saved);
+                            if (Array.isArray(parsed) && parsed.length > 0) {
+                                this.collectedCards = parsed;
+                            } else {
+                                this.collectedCards = [0, 1, 2, 4, 5, 9];
+                                localStorage.setItem('xian-cards', JSON.stringify(this.collectedCards));
+                            }
+                        } else {
+                            this.collectedCards = [0, 1, 2, 4, 5, 9];
+                            localStorage.setItem('xian-cards', JSON.stringify(this.collectedCards));
+                        }
+                    } catch (e) {
+                        console.log('Failed to load saved cards:', e);
+                        this.collectedCards = [0, 1, 2, 4, 5, 9];
+                        localStorage.setItem('xian-cards', JSON.stringify(this.collectedCards));
+                    }
+                    
+                    this.audio = new Audio();
+                    this.audio.addEventListener('timeupdate', () => { this.currentTime = this.audio.currentTime; });
+                    this.audio.addEventListener('loadedmetadata', () => { this.duration = this.audio.duration; this.isAudioLoading = false; });
+                    this.audio.addEventListener('ended', () => { this.isPlaying = false; this.currentTime = 0; });
+                    this.audio.addEventListener('error', () => { console.log('音频文件占位'); this.isAudioLoading = false; });
+                },
+
+                getRarityClass(index) {
+                    const rarity = this.spots[index]?.rarity || 'bronze';
+                    return { 'gold': 'card-gold-border', 'silver': 'card-silver-border', 'bronze': 'card-bronze-border' }[rarity];
+                },
+
+                isCollected(index) {
+                    return this.collectedCards.includes(index);
+                },
+
+                getSpotImage(index) {
+                    const localImages = [
+                        'images/01-bingmayong.jpg',
+                        'images/02-dayanta.jpg',
+                        'images/03-chengqiang.jpg',
+                        'images/04-datangfurongyuan.jpg',
+                        'images/05-huaqinggong.jpg',
+                        'images/06-daminggong.jpg',
+                        'images/07-zhonglou.jpg',
+                        'images/08-huiminjie.jpg',
+                        'images/09-datangbuxiacheng.jpg',
+                        'images/10-shanxilishibowuguan.jpg',
+                        'images/11-beilinbowuguan.jpg',
+                        'images/12-xianbowuguan.jpg',
+                        'images/13-hanchenghu.jpg',
+                        'images/14-weiyanggong.jpg',
+                        'images/15-guangrensi.jpg',
+                        'images/16-qinglongsi.jpg',
+                        'images/17-gaojiadayuan.jpg'
+                    ];
+                    if (index < localImages.length) {
+                        return localImages[index];
+                    }
+                    const unsplashImages = [
+                        'https://images.unsplash.com/photo-1544551763-d76694265947?w=400&h=225&fit=crop',
+                        'https://images.unsplash.com/photo-1617290508988-8bc13a002145?w=400&h=225&fit=crop',
+                        'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=400&h=225&fit=crop',
+                        'https://images.unsplash.com/photo-1567529684158-755000495677?w=400&h=225&fit=crop',
+                        'https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=400&h=225&fit=crop',
+                        'https://images.unsplash.com/photo-1544551763-643e4d549b9a?w=400&h=225&fit=crop',
+                        'https://images.unsplash.com/photo-1544551763-f64f14441502?w=400&h=225&fit=crop',
+                        'https://images.unsplash.com/photo-1544551763-0a5b5967742a?w=400&h=225&fit=crop',
+                        'https://images.unsplash.com/photo-1567529684158-755000495677?w=400&h=225&fit=crop',
+                        'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=400&h=225&fit=crop'
+                    ];
+                    return unsplashImages[(index - localImages.length) % unsplashImages.length];
+                },
+
+                getRarityBgClass(index) {
+                    const rarity = this.spots[index]?.rarity || 'bronze';
+                    return { 'gold': 'bg-ancient-gold/20', 'silver': 'bg-gray-500/20', 'bronze': 'bg-amber-700/20' }[rarity];
+                },
+
+                getRarityBadgeClass(index) {
+                    const rarity = this.spots[index]?.rarity || 'bronze';
+                    return {
+                        'gold': 'bg-ancient-gold/20 text-ancient-gold border border-ancient-gold/50',
+                        'silver': 'bg-gray-500/20 text-gray-300 border border-gray-500/50',
+                        'bronze': 'bg-amber-700/20 text-amber-400 border border-amber-700/50'
+                    }[rarity];
+                },
+
+                getRarityText(index) {
+                    const rarity = this.spots[index]?.rarity || 'bronze';
+                    return { 'gold': '传世珍品', 'silver': '文化瑰宝', 'bronze': '古都遗韵' }[rarity];
+                },
+
+                drawCard() {
+                    if (this.isDrawing) return;
+                    this.isDrawing = true;
+                    this.showCardFront = false; // 一开始显示未解锁状态
+                    // 先随机选择卡牌，让动画能显示正确的图片
+                    const randomIndex = Math.floor(Math.random() * this.spots.length);
+                    this.selectedIndex = randomIndex;
+                    
+                    // 更新数据
+                    const isNew = !this.collectedCards.includes(randomIndex);
+                    if (isNew) {
+                        this.collectedCards.push(randomIndex);
+                        localStorage.setItem('xian-cards', JSON.stringify(this.collectedCards));
+                    }
+                    if (!this.drawCount[randomIndex]) {
+                        this.drawCount[randomIndex] = 0;
+                    }
+                    this.drawCount[randomIndex]++;
+                    
+                    // 卡牌弹出后（1秒后）开始闪烁效果
+                    setTimeout(() => {
+                        // 闪烁几次
+                        let flashCount = 0;
+                        const flashInterval = setInterval(() => {
+                            this.showCardFront = !this.showCardFront;
+                            flashCount++;
+                            if (flashCount >= 4) {
+                                clearInterval(flashInterval);
+                                this.showCardFront = true; // 最后显示正面
+                            }
+                        }, 150);
+                    }, 1000);
+                    
+                    // 动画播放完成后关闭动画并显示详情
+                    setTimeout(() => {
+                        this.showDetail = true;
+                        this.isDrawing = false;
+                        this.currentView = 'collection';
+                        setTimeout(() => { this.initMap(); }, 300);
+                    }, 2200);
+                },
+                
+                getDrawCount(index) {
+                    return this.drawCount[index] || 0;
+                },
+
+                resetProgress() {
+                    if (confirm('确定要重置所有抽卡记录吗？')) {
+                        this.collectedCards = [];
+                        this.drawCount = [];
+                        localStorage.removeItem('xian-cards');
+                        this.showDetail = false;
+                    }
+                },
+
+                openDetail(index) {
+                    if (!this.collectedCards.includes(index)) return;
+                    if (this.isPlaying) this.stopAudio();
+                    this.selectedIndex = index;
+                    this.showDetail = true;
+                    this.currentTime = 0;
+                    this.duration = 0;
+                    this.isPlaying = false;
+                    setTimeout(() => { this.initMap(); }, 300);
+                },
+
+                closeDetail() { 
+                    this.showDetail = false; 
+                    this.stopAudio(); 
+                },
+
+                handleSwipeClose(event) {
+                    const endY = event.changedTouches[0].clientY;
+                    if (endY - this.startY > 100) this.closeDetail();
+                },
+
+                toggleAudio() { this.isPlaying ? this.pauseAudio() : this.playAudio(); },
+
+                playAudio() {
+                    const audioUrl = this.spots[this.selectedIndex]?.audio;
+                    if (!audioUrl) return;
+                    this.isAudioLoading = true;
+                    if (this.audio.src !== audioUrl) this.audio.src = audioUrl;
+                    this.audio.play().then(() => { this.isPlaying = true; }).catch(() => { this.isAudioLoading = false; });
+                },
+
+                pauseAudio() { this.audio.pause(); this.isPlaying = false; },
+
+                stopAudio() { this.audio.pause(); this.audio.currentTime = 0; this.isPlaying = false; this.currentTime = 0; },
+
+                seekAudio(event) {
+                    const progressBar = event.currentTarget;
+                    const rect = progressBar.getBoundingClientRect();
+                    this.audio.currentTime = ((event.clientX - rect.left) / rect.width) * this.duration;
+                },
+
+                formatTime(seconds) {
+                    if (!seconds || isNaN(seconds)) return '0:00';
+                    const mins = Math.floor(seconds / 60);
+                    const secs = Math.floor(seconds % 60);
+                    return `${mins}:${secs.toString().padStart(2, '0')}`;
+                },
+
+                initMap() {
+                    const spot = this.spots[this.selectedIndex];
+                    if (!spot || !spot.lat || !spot.lng) return;
+                    const mapContainer = document.getElementById('detail-map');
+                    if (!mapContainer) return;
+                    if (this.map) this.map.destroy();
+                    try {
+                        this.map = new AMap.Map('detail-map', {
+                            center: [spot.lng, spot.lat],
+                            zoom: 16,
+                            mapStyle: 'amap://styles/dark',
+                            features: ['bg', 'road', 'building', 'point'],
+                            viewMode: '2D'
+                        });
+                        new AMap.Marker({
+                            position: [spot.lng, spot.lat],
+                            map: this.map,
+                            icon: new AMap.Icon({
+                                size: new AMap.Size(32, 32),
+                                image: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23C9A962"%3E%3Cpath d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/%3E%3C/svg%3E',
+                                imageSize: new AMap.Size(32, 32)
+                            }),
+                            title: spot.name
+                        });
+                    } catch (e) { console.log('地图加载失败:', e); }
+                }
+            }));
+        });
+    </script>
+</body>
+</html>
