@@ -403,24 +403,22 @@
                 </div>
                 <div class="p-4 overflow-y-auto max-h-[calc(70vh-60px)] scrollbar-hide">
                     <div class="space-y-2">
-                        <template x-for="(spot, index) in spots" :key="index">
+                        <template x-for="(spot, idx) in sortedSpots" :key="idx">
                             <button 
-                                @click="openDetail(index); showSpotList = false"
+                                @click="openDetail(spots.findIndex(s => s.name === spot.name)); showSpotList = false"
                                 :class="[
                                     'w-full p-3 rounded-lg flex items-center gap-3 transition-all',
-                                    collectedCards.includes(index) 
-                                        ? 'bg-gray-800/50 hover:bg-gray-700/50' 
-                                        : 'bg-gray-900/50 opacity-60'
+                                    'bg-gray-800/50 hover:bg-gray-700/50'
                                 ]"
                             >
-                                <div :class="['w-10 h-10 rounded-lg flex items-center justify-center', collectedCards.includes(index) ? getRarityBgClass(index) : 'bg-gray-700']">
-                                    <i :class="['text-lg', collectedCards.includes(index) ? spot.icon : 'fa-solid fa-lock text-gray-500']"></i>
+                                <div :class="['w-10 h-10 rounded-lg flex items-center justify-center', getRarityBgClass(spots.findIndex(s => s.name === spot.name))]">
+                                    <i :class="['text-lg', spot.icon]"></i>
                                 </div>
                                 <div class="flex-1 text-left">
                                     <p class="text-sm font-medium" x-text="spot.name"></p>
                                     <p class="text-xs text-gray-500" x-text="spot.level"></p>
                                 </div>
-                                <div x-if="collectedCards.includes(index)" class="flex items-center gap-1">
+                                <div class="flex items-center gap-1">
                                     <i class="fa-solid fa-star star-rating text-xs"></i>
                                     <span class="text-xs text-gray-400" x-text="spot.rating"></span>
                                 </div>
@@ -455,7 +453,20 @@
                 duration: 0,
                 
                 // 17个景点数据
-                spots: [
+                spots: [],
+                
+                // 按评分排序的景点列表（用于名录）
+                get sortedSpots() {
+                    return [...this.spots].sort((a, b) => {
+                        const ratingA = parseFloat(a.rating) || 0;
+                        const ratingB = parseFloat(b.rating) || 0;
+                        return ratingB - ratingA;
+                    });
+                },
+                
+                // 初始化景点数据
+                initSpots() {
+                    this.spots = [
                     {
                         name: '秦始皇兵马俑博物馆',
                         address: '西安市临潼区秦陵北路',
@@ -615,7 +626,7 @@
                         address: '碑林区友谊西路72号',
                         level: '国家一级博物馆、AAAA级景区',
                         hours: '旺季约08:30—18:00',
-                        rating: '-',
+                        rating: '4.7',
                         lat: 34.238600,
                         lng: 108.944000,
                         description: '博物馆+唐荐福寺遗址+小雁塔，三位一体的文化休闲空间。相比陕历博的人潮，这里相对清静，却同样藏龙卧虎。',
@@ -629,7 +640,7 @@
                         address: '未央区北二环与朱宏路交汇处西北角',
                         level: '国家4A级景区、国家水利风景区',
                         hours: '春夏季约6:00—22:00',
-                        rating: '-',
+                        rating: '4.6',
                         lat: 34.284700,
                         lng: 108.904200,
                         description: '想在西郊找一片开阔水面、又带着汉风汉韵？汉城湖是个好选择。原为团结水库，2010年更名汉城湖，850亩清澈水面依偎汉长安城遗址。',
@@ -643,7 +654,7 @@
                         address: '未央区大兴西路一带',
                         level: '世界文化遗产',
                         hours: '全天',
-                        rating: '-',
+                        rating: '4.5',
                         lat: 34.276500,
                         lng: 108.884000,
                         description: '未央宫是西汉帝国的正宫，刘邦重臣萧何监造，自建成起200余年多为皇帝理政之所——诗词中的「未央宫」几乎就是汉宫的代名词。',
@@ -657,7 +668,7 @@
                         address: '城墙西北角西北一路152号',
                         level: '全国重点寺院、4A级景区',
                         hours: '约7:30—18:00',
-                        rating: '-',
+                        rating: '4.7',
                         lat: 34.275000,
                         lng: 108.932000,
                         description: '西安城墙西北角，藏着一座全省唯一的藏传佛教格鲁派寺院——广仁寺。康熙四十四年西巡时敕建，取「广布仁德」之意。',
@@ -671,7 +682,7 @@
                         address: '雁塔区西影路铁炉庙村北1号',
                         level: '佛教密宗祖庭',
                         hours: '约08:30—18:00',
-                        rating: '-',
+                        rating: '4.6',
                         lat: 34.220000,
                         lng: 108.986000,
                         description: '樱花季来西安？青龙寺是首选。这里是日本佛教真言宗祖庭——空海法师曾在此拜惠果为师，学成东归创立东密，被日本人视为圣寺。',
@@ -685,7 +696,7 @@
                         address: '莲湖区北院门144号',
                         level: '陕西省文物保护单位',
                         hours: '约10:00—18:00',
-                        rating: '-',
+                        rating: '4.6',
                         lat: 34.263800,
                         lng: 108.938000,
                         description: '回民街的喧嚣里，藏着一座保存最完整的明清民居四合院。始建于明崇祯十四年，三院四进、86间房屋，榜眼及第的高岳崧家族七代为官。',
@@ -694,9 +705,13 @@
                         icon: 'fa-solid fa-home',
                         rarity: 'bronze'
                     }
-                ],
+                    ];
+                },
 
                 init() {
+                    // 初始化景点数据
+                    this.initSpots();
+                    
                     try {
                         const saved = localStorage.getItem('xian-cards');
                         if (saved) {
@@ -846,7 +861,6 @@
                 },
 
                 openDetail(index) {
-                    if (!this.collectedCards.includes(index)) return;
                     if (this.isPlaying) this.stopAudio();
                     this.selectedIndex = index;
                     this.showDetail = true;
